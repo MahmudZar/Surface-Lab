@@ -1,0 +1,37 @@
+/**
+ * Base Styles
+ * 
+ * Reset and foundational styles
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-base);
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+input, button {
+    font-family: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+input:focus, button:focus {
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+}
