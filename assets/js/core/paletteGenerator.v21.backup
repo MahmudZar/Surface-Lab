@@ -1,0 +1,320 @@
+/**
+ * PaletteGenerator Module
+ * 
+ * Scientific palette generation with perceptually uniform lightness.
+ * 
+ * VERSION 2.1.0 - HYBRID ALGORITHM SYSTEM
+ * 
+ * Features:
+ * - Algorithm A: Grey-Optimized scaling for near-neutral colors (chroma < 5)
+ * - Algorithm B: Universal Perceptual scaling for chromatic colors (chroma >= 5)
+ * - Intelligent algorithm selection based on input color characteristics
+ * - Enhanced gamut handling with progressive chroma reduction
+ * 
+ * Color Spaces: LAB (L*a*b*), LCh (Lightness-Chroma-Hue)
+ * 
+ * @module paletteGenerator
+ * @version 2.1.0
+ */
+
+import ColorScience from './colorScience.js';
+
+const PaletteGenerator = {
+    /**
+     * Generate scientifically uniform color scale
+     * 
+     * Algorithm:
+     * 1. Convert base color to LAB space
+     * 2. Calculate optimal position based on lightness
+     * 3. Generate colors with linear lightness distribution
+     * 4. Preserve hue and chroma, vary only lightness
+     * 
+     * @param {string} baseColor - Hex color (e.g., '#3b82f6')
+     * @param {number} steps - Number of colors to generate (5-50)
+     * @returns {Array<Object>} Array of color objects with hex, name, lightness
+     */
+    generateUniformScale(baseColor, steps) {
+        const baseLab = ColorScience.hexToLab(baseColor);
+        const baseLightness = baseLab.L;
+        
+        // Calculate optimal position based on lightness (0-100)
+        // Using the paper's approach for optimal distribution
+        const basePosition = this.calculateOptimalPosition(baseLightness);
+        const baseColorIndex = Math.round(basePosition * (steps - 1));
+        
+        const colors = [];
+        
+        // Define lightness range with proper scientific bounds
+        const minLightness = 5;   // Very dark but not black
+        const maxLightness = 95;  // Very light but not pure white
+        
+        for (let i = 0; i < steps; i++) {
+            const position = i / (steps - 1); // 0 to 1
+            
+            let targetLightness;
+            if (i === baseColorIndex) {
+                // Exact base color
+                targetLightness = baseLightness;
+            } else {
+                // Calculate target lightness using scientific interpolation
+                targetLightness = this.calculateTargetLightness(
+                    position, basePosition, baseLightness, minLightness, maxLightness
+                );
+            }
+            
+            // Generate color with target lightness while preserving hue and chroma
+            const color = this.generateColorWithLightness(baseLab, targetLightness);
+            
+            colors.push({
+                hex: color,
+                name: this.generateColorName(i, steps),
+                isBase: i === baseColorIndex,
+                lightness: Math.round(targetLightness)
+            });
+        }
+        
+        return colors;
+    },
+
+    /**
+     * Calculate optimal position using scientific method
+     * 
+     * @param {number} lightness - Lightness value [0-100]
+     * @returns {number} Normalized position [0-1]
+     */
+    calculateOptimalPosition(lightness) {
+        // Normalize lightness to 0-1 range
+        const normalized = Math.max(0, Math.min(100, lightness)) / 100;
+        
+        // Use the paper's approach: linear distribution for perceptual uniformity
+        // No curve - pure linear for mathematical consistency
+        return normalized;
+    },
+
+    /**
+     * Calculate target lightness with mathematical precision
+     * 
+     * @param {number} position - Current position [0-1]
+     * @param {number} basePosition - Base color position [0-1]
+     * @param {number} baseLightness - Base color lightness
+     * @param {number} minL - Minimum lightness
+     * @param {number} maxL - Maximum lightness
+     * @returns {number} Target lightness value
+     */
+    calculateTargetLightness(position, basePosition, baseLightness, minL, maxL) {
+        if (position < basePosition) {
+            // Darker colors - linear interpolation from min to base
+            if (basePosition === 0) return minL;
+            const factor = position / basePosition;
+            return minL + (baseLightness - minL) * factor;
+        } else {
+            // Lighter colors - linear interpolation from base to max
+            if (basePosition === 1) return maxL;
+            const factor = (position - basePosition) / (1 - basePosition);
+            return baseLightness + (maxL - baseLightness) * factor;
+        }
+    },
+
+    /**
+     * Generate color with specific lightness - HYBRID ALGORITHM SYSTEM
+     * Intelligently chooses between Grey-Optimized and Universal Perceptual algorithms
+     * 
+     * @param {Object} baseLab - Base color in LAB space
+     * @param {number} targetLightness - Target lightness value
+     * @returns {string} Generated hex color
+     */
+    generateColorWithLightness(baseLab, targetLightness) {
+        // Calculate base chroma to determine which algorithm to use
+        const baseChroma = this.calculateChroma(baseLab.a, baseLab.b);
+        
+        // HYBRID DECISION POINT
+        let newLab;
+        
+        if (baseChroma < 5) {
+            // Algorithm A: Grey-Optimized
+            // For near-neutral colors (greys, beiges, off-whites)
+            newLab = this.greyOptimizedScale(baseLab, targetLightness);
+        } else {
+            // Algorithm B: Universal Perceptual
+            // For chromatic colors (blues, reds, greens, etc.)
+            newLab = this.universalPerceptualScale(baseLab, targetLightness);
+        }
+        
+        // Convert to hex
+        let result = ColorScience.labToHex(newLab.L, newLab.a, newLab.b);
+        
+        // Enhanced gamut handling with finer reduction steps
+        if (!this.isValidHex(result)) {
+            // Progressive chroma reduction with smaller steps for smoother fallback
+            for (let reduction = 0.98; reduction > 0.3; reduction -= 0.02) {
+                const reducedLab = {
+                    L: newLab.L,
+                    a: newLab.a * reduction,
+                    b: newLab.b * reduction
+                };
+                result = ColorScience.labToHex(reducedLab.L, reducedLab.a, reducedLab.b);
+                if (this.isValidHex(result)) break;
+            }
+            
+            // Final fallback: desaturate completely if still invalid
+            if (!this.isValidHex(result)) {
+                result = ColorScience.labToHex(newLab.L, 0, 0);
+            }
+        }
+        
+        return result;
+    },
+
+    /**
+     * Calculate chroma from LAB a* and b* components
+     * 
+     * @param {number} a - LAB a* component
+     * @param {number} b - LAB b* component
+     * @returns {number} Chroma value
+     */
+    calculateChroma(a, b) {
+        return Math.sqrt(a * a + b * b);
+    },
+
+    /**
+     * Calculate hue angle from LAB a* and b* components
+     * 
+     * @param {number} a - LAB a* component
+     * @param {number} b - LAB b* component
+     * @returns {number} Hue angle in radians
+     */
+    calculateHue(a, b) {
+        return Math.atan2(b, a);
+    },
+
+    /**
+     * Calculate maximum achievable chroma at given lightness (sRGB gamut limit)
+     * 
+     * @param {number} lightness - L* value [0-100]
+     * @returns {number} Maximum chroma value
+     */
+    calculateMaxChroma(lightness) {
+        // sRGB gamut approximation: parabolic boundary
+        // Peak chroma at L*=50, decreases toward extremes
+        
+        const l = Math.max(0, Math.min(100, lightness));
+        
+        if (l <= 50) {
+            // Dark to mid: linear increase
+            return 1.8 * l;
+        } else {
+            // Mid to light: symmetric decrease
+            return 1.8 * (100 - l);
+        }
+    },
+
+    /**
+     * Grey-Optimized Algorithm (Algorithm A)
+     * For near-neutral colors with chroma < 5
+     * 
+     * @param {Object} baseLab - Base color in LAB space
+     * @param {number} targetLightness - Target L* value
+     * @returns {Object} New LAB color
+     */
+    greyOptimizedScale(baseLab, targetLightness) {
+        const baseChroma = this.calculateChroma(baseLab.a, baseLab.b);
+        const baseHue = this.calculateHue(baseLab.a, baseLab.b);
+        const lightnessRatio = targetLightness / baseLab.L;
+        
+        // Apply non-linear chroma scaling optimized for greys
+        let chromaScale;
+        
+        if (targetLightness < baseLab.L) {
+            // Going darker: use exponent 0.5 to maintain subtle warmth
+            chromaScale = Math.pow(lightnessRatio, 0.5);
+        } else {
+            // Going lighter: use exponent 0.7 to prevent washed-out appearance
+            chromaScale = Math.pow(lightnessRatio, 0.7);
+        }
+        
+        let targetChroma = baseChroma * chromaScale;
+        
+        // Apply gamut limiting
+        const maxChroma = this.calculateMaxChroma(targetLightness);
+        targetChroma = Math.min(targetChroma, maxChroma);
+        
+        // Convert back from LCh to LAB
+        return {
+            L: targetLightness,
+            a: targetChroma * Math.cos(baseHue),
+            b: targetChroma * Math.sin(baseHue)
+        };
+    },
+
+    /**
+     * Universal Perceptual Algorithm (Algorithm B)
+     * For chromatic colors with chroma >= 5
+     * 
+     * @param {Object} baseLab - Base color in LAB space
+     * @param {number} targetLightness - Target L* value
+     * @returns {Object} New LAB color
+     */
+    universalPerceptualScale(baseLab, targetLightness) {
+        const baseChroma = this.calculateChroma(baseLab.a, baseLab.b);
+        const baseHue = this.calculateHue(baseLab.a, baseLab.b);
+        const lightnessRatio = targetLightness / baseLab.L;
+        
+        // Base perceptual scaling (exponent 0.85 for color constancy)
+        let chromaScale = Math.pow(lightnessRatio, 0.85);
+        
+        // Additional adjustments for extreme lightness values
+        if (targetLightness < 20) {
+            // Very dark: reduce chroma more aggressively to prevent muddiness
+            const darkAdjustment = Math.pow(targetLightness / 20, 0.3);
+            chromaScale *= darkAdjustment;
+        } else if (targetLightness > 85) {
+            // Very light: cap chroma to prevent gamut issues and pastel washout
+            const lightAdjustment = 1 - ((targetLightness - 85) / 15) * 0.3;
+            chromaScale *= Math.max(0.7, lightAdjustment);
+        }
+        
+        let targetChroma = baseChroma * chromaScale;
+        
+        // Apply gamut limiting
+        const maxChroma = this.calculateMaxChroma(targetLightness);
+        targetChroma = Math.min(targetChroma, maxChroma);
+        
+        // Convert back from LCh to LAB
+        return {
+            L: targetLightness,
+            a: targetChroma * Math.cos(baseHue),
+            b: targetChroma * Math.sin(baseHue)
+        };
+    },
+
+    /**
+     * Generate semantic color names
+     * 
+     * @param {number} index - Color index in palette
+     * @param {number} total - Total number of colors
+     * @returns {string} Color name (e.g., 'color-950')
+     */
+    generateColorName(index, total) {
+        const step = Math.round(1000 - (index * 950 / (total - 1)));
+        return `color-${step}`;
+    },
+
+    /**
+     * Validate hex color format and RGB bounds
+     * 
+     * @param {string} hex - Hex color to validate
+     * @returns {boolean} True if valid
+     */
+    isValidHex(hex) {
+        if (!/^#[0-9A-F]{6}$/i.test(hex)) return false;
+        
+        // Check if RGB values are within bounds
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        
+        return r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255;
+    }
+};
+
+export default PaletteGenerator;

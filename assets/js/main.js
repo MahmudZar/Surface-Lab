@@ -15,13 +15,16 @@ import PaletteGenerator from './core/paletteGenerator.js';
  * Application initialization
  */
 function initApp() {
-    console.log('🎨 SurfaceLab v2.0.0 - Scientific Color Palette Generator');
+    console.log('🎨 SurfaceLab v2.2.0 - Surface Colors Algorithm');
     console.log('Initializing application...');
 
     try {
         // Initialize UI
         UI.init();
         console.log('✅ UI initialized successfully');
+        
+        // Test chroma scaling formula
+        PaletteGenerator.testChromaScaling();
     } catch (error) {
         console.error('❌ Failed to initialize application:', error);
         showFatalError('Failed to initialize application. Please refresh the page.');
@@ -82,7 +85,7 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     window.SurfaceLab = {
         ColorScience,
         PaletteGenerator,
-        version: '2.0.0',
+        version: '2.2.0',
 
         // Utility for testing
         test: {

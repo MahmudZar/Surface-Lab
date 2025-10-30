@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Comparison Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 2rem;
+            background: #f5f5f5;
+        }
+        .comparison {
+            display: flex;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .swatch {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .label {
+            background: rgba(255,255,255,0.9);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            text-align: center;
+        }
+        .section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 SurfaceLab Color Comparison Test</h1>
+    
+    <div class="instructions">
+        <strong>Instructions:</strong>
+        <ol>
+            <li>Generate a palette with #F7F6F5 and 20 steps in SurfaceLab</li>
+            <li>Copy the hex value for color-1000</li>
+            <li>Replace "YOUR_COLOR_1000" below with your actual output</li>
+            <li>Compare visually - they should look nearly identical</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Critical Test: color-1000 (Darkest Grey)</h2>
+        <div class="comparison">
+            <div class="swatch" style="background: YOUR_COLOR_1000">
+                <div class="label">Your color-1000<br>Replace with actual</div>
+            </div>
+            <div class="swatch" style="background: #1A1918">
+                <div class="label">Friend's grey-1000<br>#1A1918</div>
+            </div>
+        </div>
+        
+        <p><strong>Expected:</strong> Both swatches should look like clean, neutral dark grey with no brown/muddy tint.</p>
+    </div>
+
+    <div class="section">
+        <h2>Secondary Test: color-950</h2>
+        <div class="comparison">
+            <div class="swatch" style="background: YOUR_COLOR_950">
+                <div class="label">Your color-950<br>Replace with actual</div>
+            </div>
+            <div class="swatch" style="background: #242321">
+                <div class="label">Friend's grey-950<br>#242321</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Console Debug Checklist</h2>
+        <p>Check your browser console for these values when generating #F7F6F5:</p>
+        <ul>
+            <li>✅ Base chroma: ~2.24</li>
+            <li>✅ Scale factor for L*=10: ~0.17-0.20</li>
+            <li>✅ Target chroma for L*=10: ~1.4</li>
+            <li>✅ Hue preservation: same angle before/after</li>
+            <li>✅ Final hex for color-1000: close to #1A1918</li>
+        </ul>
+    </div>
+
+    <script>
+        // Auto-update with clipboard if available
+        if (navigator.clipboard) {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'v') {
+                    navigator.clipboard.readText().then(text => {
+                        if (text.match(/^#[0-9A-Fa-f]{6}$/)) {
+                            console.log('Detected hex color in clipboard:', text);
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

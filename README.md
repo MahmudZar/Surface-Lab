@@ -74,7 +74,7 @@ Implements the scientific palette generation algorithm:
 
 ```javascript
 // Generate a 20-step palette from blue
-const palette = PaletteGenerator.generateUniformScale('#3b82f6', 20);
+const palette = PaletteGenerator.generateUniformScale("#3b82f6", 20);
 
 // Each color object contains:
 // {
@@ -91,13 +91,14 @@ When running locally, access the development API:
 
 ```javascript
 // Available in browser console
-window.SurfaceLab.test.generatePalette('#ff0000', 10);
-window.SurfaceLab.test.hexToLab('#3b82f6');
+window.SurfaceLab.test.generatePalette("#ff0000", 10);
+window.SurfaceLab.test.hexToLab("#3b82f6");
 ```
 
 ## Export Formats
 
 ### CSS Custom Properties
+
 ```css
 :root {
   --color-1000: #0a0a0f; /* L*: 5 */
@@ -108,6 +109,7 @@ window.SurfaceLab.test.hexToLab('#3b82f6');
 ```
 
 ### JSON
+
 ```json
 {
   "color-1000": {
@@ -119,6 +121,7 @@ window.SurfaceLab.test.hexToLab('#3b82f6');
 ```
 
 ### SVG Swatches
+
 Ready-to-use SVG with proper color metadata for design tools.
 
 ## Development
@@ -157,16 +160,19 @@ Requires ES6 modules support.
 ## Technical Specifications
 
 ### Color Spaces
+
 - **Input**: sRGB hex colors (#rrggbb)
 - **Processing**: CIE LAB (D65 illuminant)
 - **Output**: sRGB hex colors
 
 ### Lightness Range
-- **Minimum**: L* = 5 (very dark, not pure black)
-- **Maximum**: L* = 95 (very light, not pure white)
+
+- **Minimum**: L\* = 5 (very dark, not pure black)
+- **Maximum**: L\* = 95 (very light, not pure white)
 - **Distribution**: Linear interpolation for perceptual uniformity
 
 ### Gamut Handling
+
 - Automatic chroma reduction for out-of-gamut colors
 - Preserves hue while ensuring valid sRGB output
 
@@ -179,6 +185,7 @@ Requires ES6 modules support.
 5. Submit a pull request
 
 ### Code Style
+
 - Use ES6+ features
 - Follow JSDoc commenting
 - Maintain module isolation

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurfaceLab v2.1 - Algorithm Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .color-swatch { display: inline-block; width: 40px; height: 40px; margin: 2px; border: 1px solid #000; }
+        .test-results { margin-top: 10px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>SurfaceLab v2.1.0 - Hybrid Algorithm Test</h1>
+    
+    <div id="testResults"></div>
+    
+    <script type="module">
+        import PaletteGenerator from './assets/js/core/paletteGenerator.js';
+        import ColorScience from './assets/js/core/colorScience.js';
+        
+        // Test cases from the documentation
+        const testCases = [
+            {
+                name: "Light Grey #F7F6F5 (Should use Algorithm A - Grey-Optimized)",
+                color: "#F7F6F5",
+                expectedAlgorithm: "A",
+                description: "Should produce clean dark greys, not muddy browns"
+            },
+            {
+                name: "Dark Purple #28242E (Should use Algorithm A - Grey-Optimized)", 
+                color: "#28242E",
+                expectedAlgorithm: "A",
+                description: "Low chroma color should use grey-optimized scaling"
+            },
+            {
+                name: "Vibrant Blue #3B82F6 (Should use Algorithm B - Universal Perceptual)",
+                color: "#3B82F6", 
+                expectedAlgorithm: "B",
+                description: "High chroma color should maintain color character"
+            },
+            {
+                name: "Green #10B981 (Should use Algorithm B - Universal Perceptual)",
+                color: "#10B981",
+                expectedAlgorithm: "B", 
+                description: "Should handle high chroma well"
+            },
+            {
+                name: "Red #EF4444 (Should use Algorithm B - Universal Perceptual)",
+                color: "#EF4444",
+                expectedAlgorithm: "B",
+                description: "Gamut stress test - should not produce invalid hex codes"
+            }
+        ];
+        
+        function runTests() {
+            const resultsDiv = document.getElementById('testResults');
+            let allTestsPassed = true;
+            
+            testCases.forEach((testCase, index) => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-case';
+                
+                try {
+                    // Generate palette
+                    const palette = PaletteGenerator.generateUniformScale(testCase.color, 20);
+                    
+                    // Check which algorithm was used by examining chroma behavior
+                    const baseLab = ColorScience.hexToLab(testCase.color);
+                    const baseChroma = Math.sqrt(baseLab.a * baseLab.a + baseLab.b * baseLab.b);
+                    const actualAlgorithm = baseChroma < 5 ? "A" : "B";
+                    
+                    // Create visual representation
+                    let swatchesHtml = '';
+                    palette.forEach(colorObj => {
+                        swatchesHtml += `<div class="color-swatch" style="background-color: ${colorObj.hex}" title="${colorObj.hex} (L*: ${colorObj.lightness})"></div>`;
+                    });
+                    
+                    // Validate results
+                    const algorithmMatch = actualAlgorithm === testCase.expectedAlgorithm;
+                    const allValidHex = palette.every(c => /^#[0-9A-F]{6}$/i.test(c.hex));
+                    const lightnessProgression = checkLightnessProgression(palette);
+                    
+                    if (!algorithmMatch || !allValidHex || !lightnessProgression) {
+                        allTestsPassed = false;
+                    }
+                    
+                    testDiv.innerHTML = `
+                        <h3>${testCase.name}</h3>
+                        <p><strong>Base Color:</strong> ${testCase.color} (Chroma: ${baseChroma.toFixed(2)})</p>
+                        <p><strong>Algorithm Used:</strong> <span class="${algorithmMatch ? 'success' : 'error'}">${actualAlgorithm} ${algorithmMatch ? '✓' : '✗ Expected: ' + testCase.expectedAlgorithm}</span></p>
+                        <p><strong>Valid Hex Colors:</strong> <span class="${allValidHex ? 'success' : 'error'}">${allValidHex ? '✓' : '✗'}</span></p>
+                        <p><strong>Lightness Progression:</strong> <span class="${lightnessProgression ? 'success' : 'error'}">${lightnessProgression ? '✓' : '✗'}</span></p>
+                        <p class="info">${testCase.description}</p>
+                        <div class="test-results">
+                            ${swatchesHtml}
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    allTestsPassed = false;
+                    testDiv.innerHTML = `
+                        <h3>${testCase.name}</h3>
+                        <p class="error">❌ Test failed with error: ${error.message}</p>
+                    `;
+                }
+                
+                resultsDiv.appendChild(testDiv);
+            });
+            
+            // Overall result
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-case';
+            summaryDiv.innerHTML = `
+                <h2>Test Summary</h2>
+                <p class="${allTestsPassed ? 'success' : 'error'}">
+                    ${allTestsPassed ? '✅ All tests passed!' : '❌ Some tests failed'}
+                </p>
+            `;
+            resultsDiv.insertBefore(summaryDiv, resultsDiv.firstChild);
+        }
+        
+        function checkLightnessProgression(palette) {
+            // Check if lightness values are in ascending order
+            for (let i = 1; i < palette.length; i++) {
+                if (palette[i].lightness < palette[i-1].lightness) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        // Run tests when page loads
+        runTests();
+    </script>
+</body>
+</html>
